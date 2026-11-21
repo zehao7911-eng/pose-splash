@@ -49,6 +49,22 @@ export function createView(canvas){
  const jets=new T.InstancedMesh(new T.SphereGeometry(.035,5,4),material('#ccf7ef',.18),72);scene.add(jets);jets.frustumCulled=false;const jetMatrix=new T.Object3D();
  const ripples=[];for(let i=0;i<7;i++){let rr=ring(scene,(i%2?1:-1)*5.9,.205,-17+i*3.2,.3,.012,'#9de8df');rr.rotation.x=-Math.PI/2;rr.material=rr.material.clone();rr.material.transparent=true;rr.material.opacity=.35;rr.castShadow=false;ripples.push(rr);}
 
+ // Pool furniture and planting stay outside the competition lanes.
+ for(const side of [-1,1])for(const z of [-14,-7,0,7]){
+   const x=side*8.1;
+   box(set,x,.42,z,.72,.12,1.65,'#fff1cf');
+   box(set,x,.51,z,.61,.11,1.49,'#f39568');
+   const back=box(set,x,.74,z-.78,.65,.12,.8,'#f39568');
+   back.rotation.x=.55;
+   for(const offset of [-.58,.58])box(set,x,.23,z+offset,.63,.28,.12,'#397e83');
+   for(let stripe=0;stripe<4;stripe++)box(set,x,.577,z+.32+stripe*.09,.55,.016,.04,'#fff2d0');
+   box(set,side*9,.32,z+1.05,.72,.58,.72,'#d9815f',.1);
+   for(let leaf=0;leaf<6;leaf++){
+     const a=leaf*Math.PI/3;
+     const frond=ball(set,side*9+Math.sin(a)*.24,.81,z+1.05+Math.cos(a)*.24,.11,.43,.14,leaf%2?'#589f76':'#81bc7d');
+     frond.rotation.set(.6,a,0,'YXZ');
+   }
+ }
  // Batch static set dressing by material; retain articulated objects separately.
 set.updateMatrixWorld(true);const batches=new Map(),remove=[];set.traverse(o=>{if(!o.isMesh||o===waterMesh)return;let a=o;while(a&&a!==set){if(a.userData.animated)return;a=a.parent;}let key=o.material.uuid;if(!batches.has(key))batches.set(key,{m:o.material,parts:[]});let g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(o.matrixWorld);batches.get(key).parts.push(g);remove.push(o);});for(let o of remove)o.removeFromParent();for(let b of batches.values()){let g=new T.BufferGeometry();for(let attr of ['position','normal','uv']){let size=attr==='uv'?2:3,total=b.parts.reduce((n,p)=>n+p.attributes.position.count*size,0),data=new Float32Array(total),offset=0;for(let p of b.parts){let ar=p.attributes[attr]?.array;if(ar)data.set(ar,offset);offset+=p.attributes.position.count*size;}g.setAttribute(attr,new T.BufferAttribute(data,size));}let m=mesh(g,b.m,set);m.castShadow=false;b.parts.forEach(p=>p.dispose());}crowd.forEach(g=>g.traverse(o=>{if(o.isMesh)o.castShadow=false;}));
 function person(color){let root=new T.Group(),body=new T.Group();root.add(body);let suit=new T.MeshStandardMaterial({color,roughness:.6}),skin=material('#e6ad80',.68),dark=material('#253d4b'),ivory=material('#fff4d5');
@@ -58,6 +74,14 @@ function person(color){let root=new T.Group(),body=new T.Group();root.add(body);
   ball(head,0,-.065,.34,.075,.085,.07,skin);let smile=new T.CatmullRomCurve3([new T.Vector3(-.1,-.2,.32),new T.Vector3(0,-.23,.34),new T.Vector3(.1,-.2,.32)]);mesh(new T.TubeGeometry(smile,8,.014,6,false),dark,head);
   ball(head,0,.23,-.07,.39,.29,.33,'#4b3941');for(let i=0;i<7;i++){let lock=ball(head,-.29+i*.095,.3+Math.sin(i*.7)*.045,.19,.1,.18,.18,'#5b4143');lock.rotation.z=-.45;}
   let band=ring(head,0,.27,0,.37,.045,'#ffda84');band.rotation.x=Math.PI/2;for(let s of [-1,1]){let lens=ball(head,s*.15,.34,.28,.135,.09,.045,material('#43b6c3',.12,.45));ring(head,s*.15,.34,.3,.09,.025,'#fff1c5').scale.x=1.3;}box(head,0,.34,.32,.08,.03,.025,'#fff0c2',.005);
+  // Raised seams, zipper pull and goggle hardware read in the close shots.
+  box(body,0,1.71,.264,.07,.11,.028,'#f8c77c',.012);
+  for(const side of [-1,1]){
+    rod(body,[side*.29,1.24,.197],[side*.29,1.71,.197],.012,'#f9dfac');
+    rod(body,[side*.09,1.24,.259],[side*.23,1.32,.25],.016,'#4e7780');
+    box(head,side*.35,.28,.16,.065,.083,.08,'#d69355',.015);
+    ball(head,side*.15-.035,.366,.32,.034,.015,.012,'#ddfbf8');
+  }
   const arms=[],legs=[];for(let s of [-1,1]){let arm=new T.Group();arm.position.set(s*.4,1.76,0);body.add(arm);ball(arm,0,-.08,0,.18,.22,.2,suit);rod(arm,[0,-.08,0],[0,-.43,0],.135,suit);ball(arm,0,-.46,0,.125,.13,.13,skin);rod(arm,[0,-.43,0],[0,-.73,.025],.105,skin);box(arm,0,-.68,.015,.23,.1,.22,'#fff4d6',.03);ball(arm,0,-.83,.035,.125,.16,.08,skin);for(let i=0;i<4;i++)ball(arm,-.072+i*.048,-.94,.04,.026,.065,.04,skin);ball(arm,s*.13,-.8,.04,.055,.08,.055,skin);arms.push(arm);
    let leg=new T.Group();leg.position.set(s*.2,1.02,0);root.add(leg);rod(leg,[0,0,0],[0,-.42,0],.15,suit);ball(leg,0,-.43,0,.15,.15,.16,suit);rod(leg,[0,-.43,0],[0,-.78,0],.12,skin);box(leg,0,-.72,0,.25,.21,.25,'#fff2d8',.035);box(leg,0,-.65,.131,.25,.035,.016,'#4ba4a8',.004);box(leg,0,-.89,.09,.31,.23,.49,'#fff0d7',.07);box(leg,0,-.98,.1,.33,.07,.51,'#355267',.02);for(let k=0;k<3;k++)box(leg,0,-.8,.18+k*.06,.2,.018,.022,'#65929a',.005);legs.push(leg);}
   return {root,body,head,arms,legs,suit,pose:0};
@@ -78,8 +102,9 @@ function person(color){let root=new T.Group(),body=new T.Group();root.add(body);
   box(wallHole,0,3.65,.12,9.5,.18,.48,'#fff2d1');for(let s of [-1,1]){box(wallHole,s*4.62,1.75,.12,.16,4,.48,'#fff2d1');for(let y of [.2,1.1,2,2.9])ball(wallHole,s*4.62,y,.4,.055,.055,.03,'#dd9f60');}wallZ=-18;wallAlpha=1;return wall;
  }
  const fxGeo=new T.SphereGeometry(1,6,4),fx=[];function burst(x,y,z,color,n=35){for(let i=0;i<n;i++){let o=mesh(fxGeo,material(color,.3),scene,x,y,z);o.castShadow=false;o.scale.setScalar(.045+Math.random()*.06);fx.push({o,v:new T.Vector3((Math.random()-.5)*6,2+Math.random()*4,(Math.random()-.5)*5),life:1+Math.random()});}while(fx.length>110){scene.remove(fx.shift().o);}}
+ let previousShot='', shotTime=0;
  let time=0,poseValue=0,actorX=0,hitTimer=0,splashTimer=0,cameraMode='home',introTime=0,theme=0;
- function animate(dt,{x=0,pose=0,z=-18,holeX=0,phase='home',level=0}={}){time+=dt;water.uniforms.time.value=time;for(let i=0;i<72;i++){let side=i<36?-1:1,u=((time*.38+(i%36)/36)%1);jetMatrix.position.set(side*(6.65-u*.75),.3+Math.sin(u*Math.PI)*1.2,-13+Math.floor(i%36/12)*6);jetMatrix.scale.setScalar(.8+Math.sin(u*Math.PI)*.6);jetMatrix.updateMatrix();jets.setMatrixAt(i,jetMatrix.matrix);}jets.instanceMatrix.needsUpdate=true;ripples.forEach((r,i)=>{let q=(time*.35+i*.17)%1;r.scale.setScalar(1+q*2.4);r.material.opacity=(1-q)*.3;});theme=level;cameraMode=phase;actorX=T.MathUtils.damp(actorX,x,12,dt);poseValue=T.MathUtils.damp(poseValue,pose,15,dt);actor.root.position.x=actorX;
+ function animate(dt,{x=0,pose=0,z=-18,holeX=0,phase='home',level=0}={}){if(previousShot!==phase){previousShot=phase;shotTime=0;}shotTime+=dt;time+=dt;water.uniforms.time.value=time;for(let i=0;i<72;i++){let side=i<36?-1:1,u=((time*.38+(i%36)/36)%1);jetMatrix.position.set(side*(6.65-u*.75),.3+Math.sin(u*Math.PI)*1.2,-13+Math.floor(i%36/12)*6);jetMatrix.scale.setScalar(.8+Math.sin(u*Math.PI)*.6);jetMatrix.updateMatrix();jets.setMatrixAt(i,jetMatrix.matrix);}jets.instanceMatrix.needsUpdate=true;ripples.forEach((r,i)=>{let q=(time*.35+i*.17)%1;r.scale.setScalar(1+q*2.4);r.material.opacity=(1-q)*.3;});theme=level;cameraMode=phase;actorX=T.MathUtils.damp(actorX,x,12,dt);poseValue=T.MathUtils.damp(poseValue,pose,15,dt);actor.root.position.x=actorX;
   let tall=pose===0,star=pose===1,duck=pose===2;let targetBody=duck?-.8:0;actor.body.position.y=T.MathUtils.damp(actor.body.position.y,targetBody,16,dt);
   actor.arms.forEach((a,i)=>{let sign=i===0?-1:1;let angle=tall?sign*2.4:star?sign*1.57:sign*.25;a.rotation.z=T.MathUtils.damp(a.rotation.z,angle,16,dt);});actor.legs.forEach((l,i)=>{l.rotation.z=T.MathUtils.damp(l.rotation.z,duck?(i===0?-.55:.55):0,16,dt);l.scale.y=T.MathUtils.damp(l.scale.y,duck?.55:1,16,dt);l.position.y=T.MathUtils.damp(l.position.y,duck?.57:1.02,16,dt);});
   actor.head.rotation.z=Math.sin(time*1.9)*.025;actor.root.rotation.y=T.MathUtils.damp(actor.root.rotation.y,phase==='home'?-.24:0,6,dt);actor.root.position.y=.55+Math.sin(time*3)*.018;actor.root.position.z=2;actor.root.rotation.x=0;actor.root.rotation.z=0;
@@ -89,7 +114,32 @@ function person(color){let root=new T.Group(),body=new T.Group();root.add(body);
   crowd.forEach((g,i)=>{g.position.y=.9+Math.floor(i%21/7)*.45+Math.max(0,Math.sin(time*2+i))*(hitTimer>0?.18:.025);});
   for(let i=fx.length-1;i>=0;i--){let f=fx[i];f.life-=dt;f.v.y-=7*dt;f.o.position.addScaledVector(f.v,dt);f.o.rotation.x+=dt*6;f.o.scale.multiplyScalar(Math.pow(.65,dt));if(f.life<=0){scene.remove(f.o);fx.splice(i,1);}}
   trophy.visible=phase==='win';trophy.position.set(.9,1.5+Math.sin(time*2)*.07,2.3);trophy.rotation.y=time*.7;
-  let cp=phase==='home'?new T.Vector3(3.4+Math.sin(time*.2)*.3,3.7,10.8):phase==='win'?new T.Vector3(3.5,3.3,9):new T.Vector3(actorX*.45,8.5,20.5);camera.position.lerp(cp,1-Math.exp(-dt*3));camera.lookAt(phase==='home'?new T.Vector3(0,1.65,2):phase==='win'?new T.Vector3(0,1.5,2):new T.Vector3(actorX*.45,1,-4));renderer.render(scene,camera);
+  let cp=phase==='home'?new T.Vector3(3.4+Math.sin(time*.2)*.3,3.7,10.8):phase==='win'?new T.Vector3(3.5,3.3,9):new T.Vector3(actorX*.45,8.5,20.5);const aim=phase==='home'?new T.Vector3(0,1.65,2):phase==='win'?new T.Vector3(0,1.5,2):new T.Vector3(actorX*.45,1,-4);
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(phase==='intro' && !reduced){
+    const wave=Math.sin(Math.PI*T.MathUtils.clamp((shotTime-.08)/1.15,0,1));
+    actor.arms[1].rotation.z+=wave*(.4+Math.sin(shotTime*23)*.25);
+    actor.head.rotation.z-=wave*.17;
+    cp.lerp(new T.Vector3(actorX+2.2,4,10.5),wave*.85);
+    aim.lerp(new T.Vector3(actorX,1.9,2),wave*.85);
+  }
+  if(phase==='recover' && splashTimer>0 && !reduced){
+    const sweep=Math.sin(Math.PI*T.MathUtils.clamp(shotTime/2.3,0,1));
+    cp.lerp(new T.Vector3(actorX-3,5.4,14),sweep*.78);
+    aim.lerp(new T.Vector3(actorX,1.5,actor.root.position.z),sweep*.8);
+    if(shotTime>.9){actor.arms[0].rotation.z=-.6;actor.arms[1].rotation.z=2.15+Math.sin(shotTime*16)*.2;}
+  }
+  if(phase==='win'){
+    const bow=Math.sin(Math.PI*T.MathUtils.clamp(shotTime/1.45,0,1));
+    actor.root.rotation.x=bow*.33;
+    actor.arms[0].rotation.z=-.65;
+    actor.arms[1].rotation.z=2.13+Math.sin(time*12)*.15;
+    trophy.position.x=actorX+.9;
+    aim.x=actorX+.25;
+    cp.x+=actorX;
+  }
+  camera.position.lerp(cp,1-Math.exp(-dt*5));
+  camera.lookAt(aim);renderer.render(scene,camera);
  }
  camera.position.set(3.4,3.7,10.8);
  function resize(){let w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
